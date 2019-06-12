@@ -30,9 +30,11 @@ FROM docker.io/centos:7
 LABEL name="teamtalk-cloud" \
   description="experimental cloud-native TeamTalk distribution" \
   maintainer="Yuxiang Zhu <vfreex@gmail.com>"
-RUN yum install -y less protobuf-lite log4cxx mariadb-libs
+RUN yum -y install epel-release
+RUN yum install -y less protobuf-lite log4cxx mariadb-libs hiredis
 COPY --from=builder /root/TeamTalk/auto_setup/ /root/TeamTalk/auto_setup/
 WORKDIR /root/TeamTalk/auto_setup/im_server/
 COPY --from=builder /root/TeamTalk/server/im-server-1.0.0.tar.gz .
 RUN sh ./setup.sh install && rm -f ./im-server-1.0.0.tar.gz
 WORKDIR /root/TeamTalk/auto_setup/im_server/im-server-1.0.0
+RUN chmod -R g+wX .

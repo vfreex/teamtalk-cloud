@@ -1,0 +1,83 @@
+version: "2.2"
+services:
+  redis:
+    # usage: https://hub.docker.com/r/centos/redis-32-centos7
+    image: docker.io/centos/redis-32-centos7:latest
+    user: "1001:0"
+    environment:
+      REDIS_PASSWORD: changeme
+    volumes:
+    - redis-data:/var/lib/redis/data:rw
+    ports:
+    - 6379/tcp
+  db:
+    # usage: https://hub.docker.com/r/centos/mariadb-102-centos7
+    image: docker.io/centos/mariadb-102-centos7:latest
+    user: "1001:0"
+    environment:
+      MYSQL_USER: teamtalk
+      MYSQL_PASSWORD: changeme
+      MYSQL_DATABASE: teamtalk
+    volumes:
+    - mysql-data:/var/lib/mysql/data:rw
+    ports:
+    - 3306/tcp
+  login_server:
+    image: localhost/teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/login_server
+    #user: "1001:0"
+    command: ./login_server
+    ports:
+    - 8008/tcp # for client
+    - 8100/tcp # for msg_server
+    - 8080/tcp # for http
+  msg_server:
+    image: localhost/teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/msg_server
+    #user: "1001:0"
+    command: ./msg_server
+    ports:
+    - 8000/tcp
+  route_server:
+    image: localhost/teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/route_server
+    #user: "1001:0"
+    command: ./route_server
+    ports: []
+  http_msg_server:
+    image: localhost/teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/http_msg_server
+    #user: "1001:0"
+    command: ./http_msg_server
+    ports: []
+  push_server:
+    image: localhost/teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/push_server
+    #user: "1001:0"
+    command: ./push_server
+    ports: []
+  db_proxy_server:
+    image: localhost/teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/db_proxy_server
+    #user: "1001:0"
+    command: ./db_proxy_server
+    ports: []
+  file_server:
+    image: localhost/teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/file_server
+    #user: "1001:0"
+    command: ./file_server
+    ports: []
+  msfs:
+    image: localhost/teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/msfs
+    #user: "1001:0"
+    command: ./msfs
+    ports: []
+  # web:
+    # https://hub.docker.com/r/centos/php-56-centos7
+
+
+volumes:
+  redis-data:
+  mysql-data:
