@@ -1,4 +1,4 @@
-IMAGE_PREFIX:=localhost/
+IMAGE_PREFIX:=docker.io/rayson/
 IMAGE_BUILD_CMD:=docker build
 
 all: images

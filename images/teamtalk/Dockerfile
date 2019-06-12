@@ -2,27 +2,28 @@
 FROM docker.io/centos:7 AS builder
 
 # install dependencies
-RUN yum -y install epel-release
-RUN yum -y install wget unzip make gcc gcc-c++ protobuf-compiler protobuf-lite-devel \
-  log4cxx-devel hiredis-devel mariadb-devel
+RUN yum -y install epel-release && yum clean all
+RUN yum -y --setopt=skip_missing_names_on_install=0 install wget bsdtar make gcc gcc-c++ protobuf-compiler \
+  protobuf-lite-devel log4cxx-devel hiredis-devel mariadb-devel &&\
+  yum clean all
 
 # download source code
 ARG TEAMTALK_DOWNLOAD_URL=https://github.com/vfreex/teamtalk/archive/master.zip
-# COPY TeamTalk-master.zip /tmp/TeamTalk-master.zip
-RUN wget -O /tmp/teamtalk-master.zip "$TEAMTALK_DOWNLOAD_URL"
-RUN unzip /tmp/teamtalk-master.zip -d /root && mv /root/teamtalk-master /root/TeamTalk
-WORKDIR /root/TeamTalk/server/src
+RUN wget -O /tmp/teamtalk.zip -- "$TEAMTALK_DOWNLOAD_URL"
+RUN localedef -i en_US -f UTF-8 en_US.UTF-8
+ENV LANG=en_US.UTF-8
+RUN mkdir -p /root/src/teamtalk &&\
+  bsdtar -xf /tmp/teamtalk.zip --strip-components=1 -C /root/src/teamtalk
+WORKDIR /root/src/teamtalk/server/src
 
 # protobuf build
 RUN pushd ../../pb/ ;\
     sh create.sh ;\
     sh sync.sh ;\
     popd ;\
-    # mkdir -p ./base/pb/lib/linux/ ;\
-    # cp /usr/lib64/libprotobuf-lite.a ./base/pb/lib/linux/ ;\
-    cp -r /usr/include/google ./base/pb/
+    ln -s /usr/include/google ./base/pb/
 
-# build
+# build TeamTalk
 RUN sh build.sh version 1.0.0
 
 # build the resulting image
@@ -30,9 +31,13 @@ FROM docker.io/centos:7
 LABEL name="teamtalk-cloud" \
   description="experimental cloud-native TeamTalk distribution" \
   maintainer="Yuxiang Zhu <vfreex@gmail.com>"
-RUN yum install -y less protobuf-lite log4cxx mariadb-libs
-COPY --from=builder /root/TeamTalk/auto_setup/ /root/TeamTalk/auto_setup/
+RUN yum -y install epel-release && yum clean all
+RUN yum -y --setopt=skip_missing_names_on_install=0 install less \
+  protobuf-lite log4cxx mariadb-libs hiredis &&\
+  yum clean all
+COPY --from=builder /root/src/teamtalk/auto_setup/ /root/TeamTalk/auto_setup/
 WORKDIR /root/TeamTalk/auto_setup/im_server/
-COPY --from=builder /root/TeamTalk/server/im-server-1.0.0.tar.gz .
+COPY --from=builder /root/src/teamtalk/server/im-server-1.0.0.tar.gz .
 RUN sh ./setup.sh install && rm -f ./im-server-1.0.0.tar.gz
 WORKDIR /root/TeamTalk/auto_setup/im_server/im-server-1.0.0
+RUN chmod -R g+wX .
