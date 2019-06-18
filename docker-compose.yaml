@@ -5,7 +5,7 @@ services:
     image: docker.io/centos/redis-32-centos7:latest
     user: "1001:0"
     environment:
-      REDIS_PASSWORD: changeme
+      REDIS_PASSWORD:
     volumes:
     - redis-data:/var/lib/redis/data:rw
     ports:
@@ -20,63 +20,96 @@ services:
       MYSQL_DATABASE: teamtalk
     volumes:
     - mysql-data:/var/lib/mysql/data:rw
+    - ./db:/vol/db:rw
     ports:
     - 3306/tcp
-  login_server:
-    image: localhost/teamtalk:latest
+  db-proxy:
+    image: ${TT_IMAGE_PREFIX:-localhost/}teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/db_proxy_server
+    command: ./db_proxy_server
+    ports:
+    - 10600/tcp
+    volumes:
+    - ./conf/dbproxyserver.conf:/root/TeamTalk/auto_setup/im_server/im-server-1.0.0/db_proxy_server/dbproxyserver.conf:ro
+  login:
+    image: ${TT_IMAGE_PREFIX:-localhost/}teamtalk:latest
+    build:
+      context: images/teamtalk
     working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/login_server
     #user: "1001:0"
     command: ./login_server
     ports:
     - 8008/tcp # for client
     - 8100/tcp # for msg_server
-    - 8080/tcp # for http
-  msg_server:
-    image: localhost/teamtalk:latest
+    - 8080:8080/tcp # for http
+    volumes:
+    - ./conf/loginserver.conf:/root/TeamTalk/auto_setup/im_server/im-server-1.0.0/db_proxy_server/loginserver.conf:ro
+  msg:
+    image: ${TT_IMAGE_PREFIX:-localhost/}teamtalk:latest
     working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/msg_server
     #user: "1001:0"
     command: ./msg_server
     ports:
-    - 8000/tcp
-  route_server:
-    image: localhost/teamtalk:latest
+    - 8000:8000/tcp
+    volumes:
+    - ./conf/msgserver.conf:/root/TeamTalk/auto_setup/im_server/im-server-1.0.0/msg_server/msgserver.conf:ro
+  route:
+    image: ${TT_IMAGE_PREFIX:-localhost/}teamtalk:latest
     working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/route_server
     #user: "1001:0"
     command: ./route_server
-    ports: []
-  http_msg_server:
-    image: localhost/teamtalk:latest
+    ports:
+    - 8200/tcp
+    volumes:
+     - ./conf/routeserver.conf:/root/TeamTalk/auto_setup/im_server/im-server-1.0.0/route_server/routeserver.conf:ro
+  http-msg:
+    image: ${TT_IMAGE_PREFIX:-localhost/}teamtalk:latest
     working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/http_msg_server
     #user: "1001:0"
     command: ./http_msg_server
-    ports: []
-  push_server:
-    image: localhost/teamtalk:latest
-    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/push_server
-    #user: "1001:0"
-    command: ./push_server
-    ports: []
-  db_proxy_server:
-    image: localhost/teamtalk:latest
-    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/db_proxy_server
-    #user: "1001:0"
-    command: ./db_proxy_server
-    ports: []
-  file_server:
-    image: localhost/teamtalk:latest
+    ports:
+    - 8400:8400/tcp
+    volumes:
+     - ./conf/httpmsgserver.conf:/root/TeamTalk/auto_setup/im_server/im-server-1.0.0/http_msg_server/httpmsgserver.conf:ro
+  file:
+    image: ${TT_IMAGE_PREFIX:-localhost/}teamtalk:latest
     working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/file_server
     #user: "1001:0"
     command: ./file_server
-    ports: []
+    ports:
+    - 8600:8600/tcp
+    - 8601/tcp
+    volumes:
+     - ./conf/fileserver.conf:/root/TeamTalk/auto_setup/im_server/im-server-1.0.0/file_server/fileserver.conf:ro
   msfs:
-    image: localhost/teamtalk:latest
+    image: ${TT_IMAGE_PREFIX:-localhost/}teamtalk:latest
     working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/msfs
     #user: "1001:0"
     command: ./msfs
-    ports: []
-  # web:
-    # https://hub.docker.com/r/centos/php-56-centos7
-
+    ports:
+    - 8700:8700/tcp
+    volumes:
+     - ./conf/msfs.conf:/root/TeamTalk/auto_setup/im_server/im-server-1.0.0/msfs/msfs.conf:ro
+  push:
+    scale: 0 # disabled by default
+    image: ${TT_IMAGE_PREFIX:-localhost/}teamtalk:latest
+    working_dir: /root/TeamTalk/auto_setup/im_server/im-server-1.0.0/push_server
+    #user: "1001:0"
+    command: ./push_server
+    ports:
+    - 8500/tcp
+    volumes:
+     - ./conf/pushserver.conf:/root/TeamTalk/auto_setup/im_server/im-server-1.0.0/push_server/pushserver.conf:ro
+  admin:
+    image: ${TT_IMAGE_PREFIX:-localhost/}teamtalk-admin:latest
+    build:
+      context: images/teamtalk-admin
+    ports:
+    - 10080:80/tcp
+    volumes:
+    - ./conf/config.php:/var/www/html/application/config/config.php:ro
+    - ./conf/database.php:/var/www/html/application/config/database.php:ro
+    - ./conf/im.conf:/etc/httpd/conf.d/im.conf:rw
 
 volumes:
   redis-data:
